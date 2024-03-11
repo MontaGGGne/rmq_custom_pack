@@ -1,0 +1,8 @@
+*.venv
+*.devcontainer
+*.erlang.cookie
+*.cookie
+*.o
+*.env
+*.log
+*.idea
