@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 	long_description = fh.read()
 
 requirements = []
-with open(os.path.join(os.path.dirname(__file__), 'project_package', 'requirements.txt'), "r") as fh:
+with open('requirements.txt', "r") as fh:
 	requirements.append(fh.readline())
 
 # Определение requests как requirements для того, чтобы этот пакет работал. Зависимости проекта.

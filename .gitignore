@@ -1,6 +1,9 @@
 *.venv
 *.env
 
+*build
+*.egg-info
+
 *.devcontainer
 *.erlang.cookie
 *.cookie
