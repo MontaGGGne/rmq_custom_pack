@@ -1,7 +1,7 @@
 import sys, os, json
 import json
 import os
-import connection as conn
+from .. import connection as conn
 from dagshub import streaming
 
 # HOST = 'localhost'

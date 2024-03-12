@@ -1,6 +1,8 @@
 import pika
 
 
+__all__ = []
+
 def _pika_connection(host, port, user, password):
     connection = pika.BlockingConnection(
                 pika.ConnectionParameters(

@@ -1,5 +1,5 @@
 import sys, os
-import connection as conn
+from .. import connection as conn
 
 # HOST = 'localhost'
 # PORT = 7801
