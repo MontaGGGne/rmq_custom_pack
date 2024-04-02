@@ -1,7 +1,5 @@
-import sys, os, json
-import json
-import os
-from .. import connection as conn
+import sys, os, json, logging
+from . import connection as conn
 from dagshub import streaming
 
 # HOST = 'localhost'
@@ -49,18 +47,35 @@ class Producer():
 
         self.__channel.queue_declare(queue=self.__queue_response, durable=True)
         self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
-    
-    
-    def __callback(ch, method, properties, body):
-        print(body)
+
 
     def producer_handler(self, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
-        try:
-            
-            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=self.__callback)
 
-            fs = streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
-            csv_file_str = fs.http_get(os.path.join(url_path_storage, filename))
+        def __callback(ch, method, properties, body):
+            print(body)
+
+        try:
+            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
+
+            try:
+                fs = streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
+            except Exception as e:
+                logging.error("[DagsHubFilesystem] DagsHubFilesystem streaming failed!")
+                logging.exception(e)
+                try:
+                    sys.exit(0)
+                except SystemExit:
+                    os._exit(0)
+            
+            try:
+                csv_file_str = fs.http_get(os.path.join(url_path_storage, filename))
+            except Exception as e:
+                logging.error("[DagsHubFilesystem] Getting files from storage failed!")
+                logging.exception(e)
+                try:
+                    sys.exit(0)
+                except SystemExit:
+                    os._exit(0)
             
             csv_as_list_of_dicts = []
             columns_names = []  
@@ -83,9 +98,8 @@ class Producer():
                 csv_as_list_of_dicts.append(dict_from_line_in_csv)
             
             self.__connection.process_data_events(time_limit=None)
-            
         except KeyboardInterrupt:
-            print("Request Interrupted")
+            logging.info("[Producer] Interrupted...")
             try:
                 sys.exit(0)
             except SystemExit:

@@ -1,5 +1,5 @@
-import sys, os
-from .. import connection as conn
+import sys, os, logging
+from . import connection as conn
 
 # HOST = 'localhost'
 # PORT = 7801
@@ -47,26 +47,34 @@ class Consumer():
         self.__channel.queue_declare(queue=self.__queue_response, durable=True)
         self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
 
-    def __callback(self, ch, method, properties, body):
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        
-        print(body)
-
-        ch.basic_publish(exchange=self.__exchange, 
-                        routing_key=self.__r_key_response, 
-                        body=body)
 
     def consumer_handler(self):
-        try:
-            
-            self.__channel.basic_qos(prefetch_count=1)
-            self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=self.__callback)
 
-            print('[Server_RabbitMQ] Waiting for messages')
-            self.__channel.start_consuming()
+        def __callback(ch, method, properties, body):
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            print(body)
+            ch.basic_publish(exchange=self.__exchange, 
+                            routing_key=self.__r_key_response, 
+                            body=body)
+
+        try:
+            self.__channel.basic_qos(prefetch_count=1)
+            self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=__callback)
             
+            try:
+                logging.info('[Consumer] Waiting for messages...')
+                self.__channel.start_consuming()
+            except Exception as e:
+                logging.error("[Consumer] Start consuming failed!")
+                logging.exception(e)
+                
+                try:
+                    sys.exit(0)
+                except SystemExit:
+                    os._exit(0)
         except KeyboardInterrupt:
-            print("[Server_RabbitMQ] Interrupted")
+            logging.info("[Consumer] Interrupted...")
+
             try:
                 sys.exit(0)
             except SystemExit:
