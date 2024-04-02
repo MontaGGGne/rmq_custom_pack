@@ -11,7 +11,8 @@ requirements = [
     'pika==1.3.2',
     'dagshub==0.3.19',
     'setuptools==69.1.1',
-    'wheel==0.42.0'
+    'wheel==0.42.0',
+	'logging==0.4.9.6'
 ]
 
 

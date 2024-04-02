@@ -62,6 +62,7 @@ class Producer():
             except Exception as e:
                 logging.error("[DagsHubFilesystem] DagsHubFilesystem streaming failed!")
                 logging.exception(e)
+
                 try:
                     sys.exit(0)
                 except SystemExit:
@@ -72,6 +73,7 @@ class Producer():
             except Exception as e:
                 logging.error("[DagsHubFilesystem] Getting files from storage failed!")
                 logging.exception(e)
+
                 try:
                     sys.exit(0)
                 except SystemExit:
@@ -100,6 +102,7 @@ class Producer():
             self.__connection.process_data_events(time_limit=None)
         except KeyboardInterrupt:
             logging.info("[Producer] Interrupted...")
+
             try:
                 sys.exit(0)
             except SystemExit:
