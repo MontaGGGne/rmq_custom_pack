@@ -2,15 +2,11 @@ import sys, os, json, logging
 from . import connection as conn
 from dagshub import streaming
 
-# HOST = 'localhost'
-# PORT = 7801
-# USER = 'rmuser'
-# PASSWORD = 'rmpassword'
 
-# REPO_URL = 'https://dagshub.com/Dimitriy200/Data'
-# TOKEN = 'a1482d904ec14cd6e61aa6fcc9df96278dc7c911'
-# URL_PATH_STORAGE = 'https://dagshub.com/api/v1/repos/Dimitriy200/Data/raw/82fd8214a8769595e670f10ce0c135947bb6638e'
-
+logging.basicConfig(level=logging.INFO, filename="py_log.log",filemode="w",
+                    format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w",
+                    format="%(asctime)s %(levelname)s %(message)s")
 
 class Producer():
     def __init__(self,
@@ -49,126 +45,73 @@ class Producer():
         self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
 
 
-    def producer_handler(self, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
-
-        def __callback(ch, method, properties, body):
-            print(body)
-
+    def __dugshub_conn(self, repo_url, token):
         try:
-            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
-
-            try:
-                fs = streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
-            except Exception as e:
-                logging.error("[DagsHubFilesystem] DagsHubFilesystem streaming failed!")
-                logging.exception(e)
-
-                try:
-                    sys.exit(0)
-                except SystemExit:
-                    os._exit(0)
-            
-            try:
-                csv_file_str = fs.http_get(os.path.join(url_path_storage, filename))
-            except Exception as e:
-                logging.error("[DagsHubFilesystem] Getting files from storage failed!")
-                logging.exception(e)
-
-                try:
-                    sys.exit(0)
-                except SystemExit:
-                    os._exit(0)
-            
-            csv_as_list_of_dicts = []
-            columns_names = []  
-            list_csv = []
-            list_csv = csv_file_str.text.split('\n')
-            columns_names = list_csv[0].split(',')
-            list_csv.pop(0)
-            for data_line in list_csv:
-                if data_line is None or data_line == '':
-                    continue
-                dict_from_line_in_csv = {}
-                data_list = data_line.split(',')
-                for col_id, col_name in enumerate(columns_names):
-                    dict_from_line_in_csv[col_name] = data_list[col_id]
-                    
-                    self.__channel.basic_publish(exchange=self.__exchange,
-                                        routing_key=self.__r_key_request,
-                                        body=json.dumps(dict_from_line_in_csv))
-                    
-                csv_as_list_of_dicts.append(dict_from_line_in_csv)
-            
-            self.__connection.process_data_events(time_limit=None)
-        except KeyboardInterrupt:
-            logging.info("[Producer] Interrupted...")
-
+            return streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
+        except Exception as e:
+            logging.error("[Producer] dugshub_conn: (DagsHubFilesystem) streaming failed!")
+            logging.exception(e)
             try:
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
 
 
+    def __get_files_from_dugshub(self, url, fs):
+        try:
+            return fs.http_get(url)
+        except Exception as e:
+            logging.error("[Producer] get_files_from_dugshub: (http_get) Getting files from storage failed!")
+            logging.exception(e)
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
 
-# def producer_handler(host,
-#                      port,
-#                      user,
-#                      password,
-#                      exchange,
-#                      exchange_type,
-#                      queue_request,
-#                      queue_response,
-#                      r_key_request,
-#                      r_key_response):
-#     connection = conn._pika_connection(host, port, user, password)
-    
-#     channel = connection.channel()  
-    
-#     channel.exchange_declare(exchange=exchange, exchange_type=exchange_type, durable=True)
 
-#     channel.queue_declare(queue=queue_request, durable=True)
-#     channel.queue_bind(exchange=exchange, queue=queue_request, routing_key=r_key_request)
+    def __data_publish(self, prod_num, csv_file_str):
+        try:
+            list_csv = csv_file_str.text.split('\n')
+            columns_names = list_csv[0].split(',')
+            data_list = []
+            list_csv.pop(0)
+            for data_id, data_line in enumerate(list_csv):
+                if data_line is None or data_line == '':
+                    continue
+                data_line_list_of_dicts = []
+                data_list.append(data_line.split(','))
+                data_line_list_of_dicts = [{col_name: float(col_val)} for col_name, col_val in zip(columns_names, data_line.split(','))]
+                data_line_list_of_dicts.append({'prod_num': prod_num})
+        
+                self.__channel.basic_publish(exchange=self.__exchange,
+                                            routing_key=self.__r_key_request,
+                                            body=json.dumps({data_id: data_line_list_of_dicts}))
+                
+            pde_logs = self.__connection.process_data_events(time_limit=None)
+            logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
+        except Exception as e:
+            logging.error("[Producer] data_publish: publish data failed!")
+            logging.exception(e)
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0) 
 
-#     channel.queue_declare(queue=queue_response, durable=True)
-#     channel.queue_bind(exchange=exchange, queue=queue_response, routing_key=r_key_response)
-    
-    
-#     def callback(ch, method, properties, body):
-#         print(body)
 
-#     channel.basic_consume(queue=queue_response, on_message_callback=callback)
+    def producer_handler(self, prod_num, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
 
-#     fs = streaming.DagsHubFilesystem(".", repo_url=REPO_URL, token=TOKEN)
-#     csv_file_str = fs.http_get(os.path.join(URL_PATH_STORAGE, 'test_FD001.csv'))
-    
-#     csv_as_list_of_dicts = []
-#     columns_names = []  
-#     list_csv = []
-#     list_csv = csv_file_str.text.split('\n')
-#     columns_names = list_csv[0].split(',')
-#     list_csv.pop(0)
-#     for data_line in list_csv:
-#         if data_line is None or data_line == '':
-#             continue
-#         dict_from_line_in_csv = {}
-#         data_list = data_line.split(',')
-#         for col_id, col_name in enumerate(columns_names):
-#             dict_from_line_in_csv[col_name] = data_list[col_id]
-            
-#             channel.basic_publish(exchange=exchange,
-#                                   routing_key=r_key_request,
-#                                   body=json.dumps(dict_from_line_in_csv))
-            
-#         csv_as_list_of_dicts.append(dict_from_line_in_csv)
-    
-#     connection.process_data_events(time_limit=None)
+        def __callback(ch, method, properties, body):
+            print(body)
+            logging.debug(f"[Producer] callback: body - {body}")
 
-# if __name__ == '__main__':
-#     try:
-#         producer_handler()
-#     except KeyboardInterrupt:
-#         print("Request Interrupted")
-#         try:
-#             sys.exit(0)
-#         except SystemExit:
-#             os._exit(0)
+        try:
+            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
+            file_system = self.__dugshub_conn(repo_url=repo_url, token=token)
+            csv_file_str = self.__get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
+            self.__data_publish(self, prod_num, csv_file_str)
+        except KeyboardInterrupt:
+            logging.info("[Producer] Interrupted...")
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)

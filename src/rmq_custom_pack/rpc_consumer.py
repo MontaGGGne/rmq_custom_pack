@@ -1,15 +1,11 @@
 import sys, os, logging
 from . import connection as conn
 
-# HOST = 'localhost'
-# PORT = 7801
-# USER = 'rmuser'
-# PASSWORD = 'rmpassword'
 
-# REPO_URL = 'https://dagshub.com/Dimitriy200/Data'
-# TOKEN = 'a1482d904ec14cd6e61aa6fcc9df96278dc7c911'
-# URL_PATH_STORAGE = 'https://dagshub.com/api/v1/repos/Dimitriy200/Data/raw/82fd8214a8769595e670f10ce0c135947bb6638e'
-
+logging.basicConfig(level=logging.INFO, filename="py_log.log",filemode="w",
+                    format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w",
+                    format="%(asctime)s %(levelname)s %(message)s")
 
 class Consumer():
     def __init__(self,
