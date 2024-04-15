@@ -32,20 +32,30 @@ class Producer():
         self.__r_key_request = r_key_request
         self.__r_key_response = r_key_response
         
-        self.__connection = conn._pika_connection(self.__host, self.__port, self.__user, self.__password)
+        self.__connection = conn._pika_connection(self.__host,
+                                                  self.__port,
+                                                  self.__user,
+                                                  self.__password)
         
         self.__channel = self.__connection.channel()  
         
-        self.__channel.exchange_declare(exchange=self.__exchange, exchange_type=self.__exchange_type, durable=True)
+        self.__channel.exchange_declare(exchange=self.__exchange,
+                                        exchange_type=self.__exchange_type,
+                                        durable=True)
 
-        self.__channel.queue_declare(queue=self.__queue_request, durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_request, routing_key=self.__r_key_request)
+        self.__channel.queue_declare(queue=self.__queue_request,
+                                     durable=True)
+        self.__channel.queue_bind(exchange=self.__exchange,
+                                  queue=self.__queue_request,
+                                  routing_key=self.__r_key_request)
 
         self.__channel.queue_declare(queue=self.__queue_response, durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
+        self.__channel.queue_bind(exchange=self.__exchange,
+                                  queue=self.__queue_response,
+                                  routing_key=self.__r_key_response)
 
 
-    def __dugshub_conn(self, repo_url, token):
+    def _dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
         try:
             return streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
         except Exception as e:
@@ -57,7 +67,7 @@ class Producer():
                 os._exit(0)
 
 
-    def __get_files_from_dugshub(self, url, fs):
+    def _get_files_from_dugshub(self, url: str, fs: streaming.DagsHubFilesystem):
         try:
             return fs.http_get(url)
         except Exception as e:
@@ -69,7 +79,7 @@ class Producer():
                 os._exit(0)
 
 
-    def __data_publish(self, prod_num, csv_file_str):
+    def _data_publish(self, prod_num, csv_file_str):
         try:
             list_csv = csv_file_str.text.split('\n')
             columns_names = list_csv[0].split(',')
@@ -106,9 +116,9 @@ class Producer():
 
         try:
             self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
-            file_system = self.__dugshub_conn(repo_url=repo_url, token=token)
-            csv_file_str = self.__get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
-            self.__data_publish(self, prod_num, csv_file_str)
+            file_system = self._dugshub_conn(repo_url=repo_url, token=token)
+            csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
+            self._data_publish(self, prod_num, csv_file_str)
         except KeyboardInterrupt:
             logging.info("[Producer] Interrupted...")
             try:
