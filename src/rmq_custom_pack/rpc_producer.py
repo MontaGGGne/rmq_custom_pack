@@ -10,16 +10,16 @@ logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w
 
 class Producer():
     def __init__(self,
-                 host,
-                 port,
-                 user,
-                 password,
-                 exchange,
-                 exchange_type,
-                 queue_request,
-                 queue_response,
-                 r_key_request,
-                 r_key_response):
+                 host: str,
+                 port: int,
+                 user: str,
+                 password: str,
+                 exchange: str,
+                 exchange_type: str,
+                 queue_request: str,
+                 queue_response: str,
+                 r_key_request: str,
+                 r_key_response: str):
         
         self.__host = host
         self.__port = port
@@ -31,14 +31,11 @@ class Producer():
         self.__queue_response = queue_response
         self.__r_key_request = r_key_request
         self.__r_key_response = r_key_response
-        
-        self.__connection = conn._pika_connection(self.__host,
-                                                  self.__port,
-                                                  self.__user,
-                                                  self.__password)
-        
-        self.__channel = self.__connection.channel()  
-        
+
+
+    def producer_handler(self, prod_num, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
+        self._picka_conn()
+
         self.__channel.exchange_declare(exchange=self.__exchange,
                                         exchange_type=self.__exchange_type,
                                         durable=True)
@@ -53,6 +50,31 @@ class Producer():
         self.__channel.queue_bind(exchange=self.__exchange,
                                   queue=self.__queue_response,
                                   routing_key=self.__r_key_response)
+
+        def __callback(ch, method, properties, body):
+            print(body)
+            logging.debug(f"[Producer] callback: body - {body}")
+
+        try:
+            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
+            file_system = self._dugshub_conn(repo_url=repo_url, token=token)
+            csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
+            self._data_publish(self, prod_num, csv_file_str)
+        except KeyboardInterrupt:
+            logging.info("[Producer] Interrupted...")
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
+        
+
+    def _picka_conn(self):
+        self.__connection = conn._pika_connection(self.__host,
+                                                  self.__port,
+                                                  self.__user,
+                                                  self.__password)
+        
+        self.__channel = self.__connection.channel() 
 
 
     def _dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
@@ -102,25 +124,6 @@ class Producer():
         except Exception as e:
             logging.error("[Producer] data_publish: publish data failed!")
             logging.exception(e)
-            try:
-                sys.exit(0)
-            except SystemExit:
-                os._exit(0) 
-
-
-    def producer_handler(self, prod_num, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
-
-        def __callback(ch, method, properties, body):
-            print(body)
-            logging.debug(f"[Producer] callback: body - {body}")
-
-        try:
-            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
-            file_system = self._dugshub_conn(repo_url=repo_url, token=token)
-            csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
-            self._data_publish(self, prod_num, csv_file_str)
-        except KeyboardInterrupt:
-            logging.info("[Producer] Interrupted...")
             try:
                 sys.exit(0)
             except SystemExit:

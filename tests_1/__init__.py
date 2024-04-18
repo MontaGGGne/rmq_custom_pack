@@ -1,0 +1,1 @@
+from src.rmq_custom_pack.rpc_producer import *
