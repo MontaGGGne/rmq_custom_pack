@@ -20,43 +20,46 @@ class Producer():
                  queue_response: str,
                  r_key_request: str,
                  r_key_response: str):
-        
-        self.__host = host
-        self.__port = port
-        self.__user = user
-        self.__password = password
-        self.__exchange = exchange
-        self.__exchange_type = exchange_type
-        self.__queue_request = queue_request
-        self.__queue_response = queue_response
-        self.__r_key_request = r_key_request
-        self.__r_key_response = r_key_response
+        self._host = host
+        self._port = port
+        self._user = user
+        self._password = password
+        self._exchange = exchange
+        self._exchange_type = exchange_type
+        self._queue_request = queue_request
+        self._queue_response = queue_response
+        self._r_key_request = r_key_request
+        self._r_key_response = r_key_response
+
+        self._connection = conn._pika_connection(self._host,
+                                                  self._port,
+                                                  self._user,
+                                                  self._password)
+        self._channel = self._connection.channel()
 
 
     def producer_handler(self, prod_num, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
-        self._picka_conn()
-
-        self.__channel.exchange_declare(exchange=self.__exchange,
-                                        exchange_type=self.__exchange_type,
+        self._channel.exchange_declare(exchange=self._exchange,
+                                        exchange_type=self._exchange_type,
                                         durable=True)
 
-        self.__channel.queue_declare(queue=self.__queue_request,
+        self._channel.queue_declare(queue=self._queue_request,
                                      durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange,
-                                  queue=self.__queue_request,
-                                  routing_key=self.__r_key_request)
+        self._channel.queue_bind(exchange=self._exchange,
+                                  queue=self._queue_request,
+                                  routing_key=self._r_key_request)
 
-        self.__channel.queue_declare(queue=self.__queue_response, durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange,
-                                  queue=self.__queue_response,
-                                  routing_key=self.__r_key_response)
+        self._channel.queue_declare(queue=self._queue_response, durable=True)
+        self._channel.queue_bind(exchange=self._exchange,
+                                  queue=self._queue_response,
+                                  routing_key=self._r_key_response)
 
-        def __callback(ch, method, properties, body):
+        def _callback(ch, method, properties, body):
             print(body)
             logging.debug(f"[Producer] callback: body - {body}")
 
         try:
-            self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=__callback)
+            self._channel.basic_consume(queue=self._queue_response, on_message_callback=_callback)
             file_system = self._dugshub_conn(repo_url=repo_url, token=token)
             csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
             self._data_publish(self, prod_num, csv_file_str)
@@ -66,15 +69,6 @@ class Producer():
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
-        
-
-    def _picka_conn(self):
-        self.__connection = conn._pika_connection(self.__host,
-                                                  self.__port,
-                                                  self.__user,
-                                                  self.__password)
-        
-        self.__channel = self.__connection.channel() 
 
 
     def _dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
@@ -115,11 +109,11 @@ class Producer():
                 data_line_list_of_dicts = [{col_name: float(col_val)} for col_name, col_val in zip(columns_names, data_line.split(','))]
                 data_line_list_of_dicts.append({'prod_num': prod_num})
         
-                self.__channel.basic_publish(exchange=self.__exchange,
-                                            routing_key=self.__r_key_request,
+                self._channel.basic_publish(exchange=self._exchange,
+                                            routing_key=self._r_key_request,
                                             body=json.dumps({data_id: data_line_list_of_dicts}))
                 
-            pde_logs = self.__connection.process_data_events(time_limit=None)
+            pde_logs = self._connection.process_data_events(time_limit=None)
             logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
         except Exception as e:
             logging.error("[Producer] data_publish: publish data failed!")
