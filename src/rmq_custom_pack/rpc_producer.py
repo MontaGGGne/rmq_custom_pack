@@ -1,4 +1,4 @@
-import sys, os, json, logging
+import sys, os, json, logging, traceback
 from . import connection as conn
 from dagshub import streaming
 
@@ -38,7 +38,7 @@ class Producer():
         self._channel = self._connection.channel()
 
 
-    def producer_handler(self, prod_num, repo_url, token, url_path_storage, filename: str = 'test_FD001.csv'):
+    def producer_handler(self, prod_num: int, repo_url: str, token: str, url_path_storage: str, filename: str):
         self._channel.exchange_declare(exchange=self._exchange,
                                         exchange_type=self._exchange_type,
                                         durable=True)
@@ -59,12 +59,23 @@ class Producer():
             logging.debug(f"[Producer] callback: body - {body}")
 
         try:
-            self._channel.basic_consume(queue=self._queue_response, on_message_callback=_callback)
+            basic_consume_res = self._channel.basic_consume(queue=self._queue_response, on_message_callback=_callback)
             file_system = self._dugshub_conn(repo_url=repo_url, token=token)
             csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
-            self._data_publish(self, prod_num, csv_file_str)
+            data_publish_res = self._data_publish(prod_num, csv_file_str)
+            return {'basic_consume_res': basic_consume_res,
+                    'file_system': file_system,
+                    'csv_file_str': csv_file_str,
+                    'data_publish_res': data_publish_res}
+    
         except KeyboardInterrupt:
             logging.info("[Producer] Interrupted...")
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
+        except Exception:
+            logging.error(f"[Producer] producer_handler: {traceback.format_exc()}")
             try:
                 sys.exit(0)
             except SystemExit:
@@ -97,24 +108,32 @@ class Producer():
 
     def _data_publish(self, prod_num, csv_file_str):
         try:
-            list_csv = csv_file_str.text.split('\n')
+            try:
+                list_csv = csv_file_str.text.split('\n')
+            except:
+                list_csv = csv_file_str.split('\n')
+            list_csv = csv_file_str.split('\n')
             columns_names = list_csv[0].split(',')
             data_list = []
+            full_data_list = []
             list_csv.pop(0)
             for data_id, data_line in enumerate(list_csv):
                 if data_line is None or data_line == '':
                     continue
                 data_line_list_of_dicts = []
                 data_list.append(data_line.split(','))
-                data_line_list_of_dicts = [{col_name: float(col_val)} for col_name, col_val in zip(columns_names, data_line.split(','))]
+                data_line_list_of_dicts = [{col_name: col_val} for col_name, col_val in zip(columns_names, data_line.split(','))]
                 data_line_list_of_dicts.append({'prod_num': prod_num})
         
                 self._channel.basic_publish(exchange=self._exchange,
                                             routing_key=self._r_key_request,
-                                            body=json.dumps({data_id: data_line_list_of_dicts}))
-                
+                                            body=json.dumps(data_line_list_of_dicts))
+
+                full_data_list.append(data_line_list_of_dicts)
+
             pde_logs = self._connection.process_data_events(time_limit=None)
             logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
+            return full_data_list
         except Exception as e:
             logging.error("[Producer] data_publish: publish data failed!")
             logging.exception(e)
