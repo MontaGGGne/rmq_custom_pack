@@ -9,16 +9,16 @@ logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w
 
 class Consumer():
     def __init__(self,
-                 host,
-                 port,
-                 user,
-                 password,
-                 exchange,
-                 exchange_type,
-                 queue_request,
-                 queue_response,
-                 r_key_request,
-                 r_key_response):
+                 host: str,
+                 port: int,
+                 user: str,
+                 password: str,
+                 exchange: str,
+                 exchange_type: str,
+                 queue_request: str,
+                 queue_response: str,
+                 r_key_request: str,
+                 r_key_response: str):
         
         self.__host = host
         self.__port = port
@@ -55,22 +55,20 @@ class Consumer():
 
         try:
             self.__channel.basic_qos(prefetch_count=1)
-            self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=__callback)
-            
+            basic_consume_res = self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=__callback)
             try:
                 logging.info('[Consumer] Waiting for messages...')
                 self.__channel.start_consuming()
             except Exception as e:
                 logging.error("[Consumer] Start consuming failed!")
                 logging.exception(e)
-                
                 try:
                     sys.exit(0)
                 except SystemExit:
                     os._exit(0)
+            return {'basic_consume_res': basic_consume_res}
         except KeyboardInterrupt:
             logging.info("[Consumer] Interrupted...")
-
             try:
                 sys.exit(0)
             except SystemExit:
