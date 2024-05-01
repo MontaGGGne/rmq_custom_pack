@@ -69,12 +69,14 @@ class Producer():
                     'data_publish_res': data_publish_res}
     
         except KeyboardInterrupt:
+            print("[Producer] Interrupted...")
             logging.info("[Producer] Interrupted...")
             try:
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
         except Exception:
+            print(f"[Producer] producer_handler: {traceback.format_exc()}")
             logging.error(f"[Producer] producer_handler: {traceback.format_exc()}")
             try:
                 sys.exit(0)
@@ -86,6 +88,7 @@ class Producer():
         try:
             return streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
         except Exception as e:
+            print("[Producer] dugshub_conn: (DagsHubFilesystem) streaming failed!")
             logging.error("[Producer] dugshub_conn: (DagsHubFilesystem) streaming failed!")
             logging.exception(e)
             try:
@@ -98,6 +101,7 @@ class Producer():
         try:
             return fs.http_get(url)
         except Exception as e:
+            print("[Producer] get_files_from_dugshub: (http_get) Getting files from storage failed!")
             logging.error("[Producer] get_files_from_dugshub: (http_get) Getting files from storage failed!")
             logging.exception(e)
             try:
@@ -132,9 +136,11 @@ class Producer():
                 full_data_list.append(data_line_list_of_dicts)
 
             pde_logs = self.__connection.process_data_events(time_limit=None)
+            print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
             logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
             return full_data_list
         except Exception as e:
+            print("[Producer] data_publish: publish data failed!")
             logging.error("[Producer] data_publish: publish data failed!")
             logging.exception(e)
             try:

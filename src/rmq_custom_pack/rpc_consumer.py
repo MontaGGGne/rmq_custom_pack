@@ -57,9 +57,11 @@ class Consumer():
             self.__channel.basic_qos(prefetch_count=1)
             basic_consume_res = self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=__callback)
             try:
+                print('[Consumer] Waiting for messages...')
                 logging.info('[Consumer] Waiting for messages...')
                 self.__channel.start_consuming()
             except Exception as e:
+                print("[Consumer] Start consuming failed!")
                 logging.error("[Consumer] Start consuming failed!")
                 logging.exception(e)
                 try:
@@ -68,6 +70,7 @@ class Consumer():
                     os._exit(0)
             return {'basic_consume_res': basic_consume_res}
         except KeyboardInterrupt:
+            print("[Consumer] Interrupted...")
             logging.info("[Consumer] Interrupted...")
             try:
                 sys.exit(0)
