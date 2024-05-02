@@ -1,11 +1,15 @@
-import sys, os, json, logging, traceback
+import sys
+import os
+import json
+import logging
+import traceback
 from . import connection as conn
 from dagshub import streaming
 
 
-logging.basicConfig(level=logging.INFO, filename="py_log.log",filemode="w",
+logging.basicConfig(level=logging.INFO, filename="py_log_producer.log",filemode="w",
                     format="%(asctime)s %(levelname)s %(message)s")
-logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w",
+logging.basicConfig(level=logging.DEBUG, filename="py_log_producer_debug.log",filemode="w",
                     format="%(asctime)s %(levelname)s %(message)s")
 
 class Producer():

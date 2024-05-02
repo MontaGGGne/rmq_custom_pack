@@ -1,10 +1,12 @@
-import sys, os, logging
+import sys
+import os
+import logging
 from . import connection as conn
 
 
-logging.basicConfig(level=logging.INFO, filename="py_log.log",filemode="w",
+logging.basicConfig(level=logging.INFO, filename="py_log_consumer.log",filemode="w",
                     format="%(asctime)s %(levelname)s %(message)s")
-logging.basicConfig(level=logging.DEBUG, filename="py_log_debug.log",filemode="w",
+logging.basicConfig(level=logging.DEBUG, filename="py_log_consumer_debug.log",filemode="w",
                     format="%(asctime)s %(levelname)s %(message)s")
 
 class Consumer():
@@ -30,11 +32,15 @@ class Consumer():
         self.__queue_response = queue_response
         self.__r_key_request = r_key_request
         self.__r_key_response = r_key_response
-        
+
+        print(f"[Consumer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
+        logging.info(f"[Consumer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
         self.__connection = conn._pika_connection(self.__host, self.__port, self.__user, self.__password)
-        
+        print("[Consumer] After connection")
+        logging.info("[Consumer] After connection")
+
         self.__channel = self.__connection.channel()  
-        
+
         self.__channel.exchange_declare(exchange=self.__exchange, exchange_type=self.__exchange_type, durable=True)
 
         self.__channel.queue_declare(queue=self.__queue_request, durable=True)
