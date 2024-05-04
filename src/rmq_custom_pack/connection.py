@@ -14,13 +14,16 @@ def _pika_connection(host: str, port: int, user: str, password: str):
     try:
         print(f"[Connection] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
         logging.info(f"[Connection] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
-        connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(
-                        host=host,
-                        port=port,
-                        credentials=pika.PlainCredentials(
-                            user,
-                            password)))
+        # connection = pika.BlockingConnection(
+        #             pika.ConnectionParameters(
+        #                 host=host,
+        #                 port=port,
+        #                 credentials=pika.PlainCredentials(
+        #                     user,
+        #                     password)))
+        parameters = pika.URLParameters(f'amqp://{user}:{password}@{host}:{port}/%2F')
+        connection = pika.BlockingConnection(parameters)
+        
         print("[Connection] After connection")
         logging.info("[Connection] After connection")
     except Exception as e:
