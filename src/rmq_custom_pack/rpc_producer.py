@@ -120,7 +120,6 @@ class Producer():
                 list_csv = csv_file_str.text.split('\n')
             except:
                 list_csv = csv_file_str.split('\n')
-            list_csv = csv_file_str.split('\n')
             columns_names = list_csv[0].split(',')
             data_list = []
             full_data_list = []
