@@ -92,8 +92,8 @@ class Producer():
         try:
             return streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
         except Exception as e:
-            print("[Producer] dugshub_conn: (DagsHubFilesystem) streaming failed!")
-            logging.error("[Producer] dugshub_conn: (DagsHubFilesystem) streaming failed!")
+            print(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
+            logging.error(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
             logging.exception(e)
             try:
                 sys.exit(0)
@@ -105,8 +105,8 @@ class Producer():
         try:
             return fs.http_get(url)
         except Exception as e:
-            print("[Producer] get_files_from_dugshub: (http_get) Getting files from storage failed!")
-            logging.error("[Producer] get_files_from_dugshub: (http_get) Getting files from storage failed!")
+            print(f"[Producer] get_files_from_dugshub: (http_get) {traceback.format_exc()}")
+            logging.error(f"[Producer] get_files_from_dugshub: (http_get) {traceback.format_exc()}")
             logging.exception(e)
             try:
                 sys.exit(0)
@@ -144,8 +144,8 @@ class Producer():
             logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
             return full_data_list
         except Exception as e:
-            print("[Producer] data_publish: publish data failed!")
-            logging.error("[Producer] data_publish: publish data failed!")
+            print(f"[Producer] data_publish: {traceback.format_exc()}")
+            logging.error(f"[Producer] data_publish: {traceback.format_exc()}")
             logging.exception(e)
             try:
                 sys.exit(0)
