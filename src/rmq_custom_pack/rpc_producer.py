@@ -35,10 +35,15 @@ class Producer():
         self.__r_key_request = r_key_request
         self.__r_key_response = r_key_response
 
+        print(f"[Producer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
+        logging.info(f"[Producer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
         self.__connection = conn._pika_connection(self.__host,
                                                   self.__port,
                                                   self.__user,
                                                   self.__password)
+        print("[Producer] After connection")
+        logging.info("[Producer] After connection")
+
         self.__channel = self.__connection.channel()
 
 
@@ -90,7 +95,10 @@ class Producer():
 
     def _dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
         try:
-            return streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
+            stream = streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
+            print(f"[Producer] dugshub_conn: (DagsHubFilesystem) {stream}")
+            logging.info(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
+            return stream
         except Exception as e:
             print(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
             logging.error(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
