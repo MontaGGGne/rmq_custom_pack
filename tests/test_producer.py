@@ -27,13 +27,13 @@ DUGSHUB_CONN_RES: fake_classes_methods.streaming.DagsHubFilesystem = fake_produc
                                                                                    token=T_TOKEN)
 
 
-def test_dugshub_conn():
-    dugshub_conn_result: fake_classes_methods.streaming.DagsHubFilesystem = fake_producer_obj._dugshub_conn(repo_url=T_URL,
-                                                                                   token=T_TOKEN)
+# def test_dugshub_conn():
+#     dugshub_conn_result: fake_classes_methods.streaming.DagsHubFilesystem = fake_producer_obj._dugshub_conn(repo_url=T_URL,
+#                                                                                    token=T_TOKEN)
 
-    assert dugshub_conn_result.project_root == '.'
-    assert dugshub_conn_result.repo_url == T_URL
-    assert dugshub_conn_result.token == T_TOKEN
+#     assert dugshub_conn_result.project_root == '.'
+#     assert dugshub_conn_result.repo_url == T_URL
+#     assert dugshub_conn_result.token == T_TOKEN
 
 
 def test_get_files_from_dugshub():

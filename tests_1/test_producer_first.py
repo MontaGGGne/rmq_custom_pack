@@ -4,7 +4,7 @@ from pika import connection
 from pika import credentials
 from rmq_custom_pack import rpc_producer
 from dagshub import streaming
-from rmq_custom_pack import connection as conn
+from rmq_custom_pack import connections as conn
 
 from typing import Any, Dict
 

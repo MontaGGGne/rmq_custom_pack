@@ -3,7 +3,7 @@ import os
 import json
 import logging
 import traceback
-from . import connection as conn
+from . import connections as conn
 from dagshub import streaming
 
 
@@ -124,32 +124,51 @@ class Producer():
 
     def _data_publish(self, prod_num, csv_file_str):
         try:
+            prod_num = int(prod_num)
+        except Exception as e:
+            print(f"[Producer] data_publish: {traceback.format_exc()}")
+            logging.error(f"[Producer] data_publish: {traceback.format_exc()}")
+            logging.exception(e)
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
+        try:
             try:
                 list_csv = csv_file_str.text.split('\n')
             except:
                 list_csv = csv_file_str.split('\n')
             columns_names = list_csv[0].split(',')
             data_list = []
-            full_data_list = []
+
+            # remove string with columns names
             list_csv.pop(0)
-            for data_id, data_line in enumerate(list_csv):
+
+            # remove strings for prod num
+            for i in range(prod_num-1):
+                list_csv.pop(0)
+
+            # get strings for prod num
+            list_csv_prod_num = list_csv[::3]
+
+            # post strings in request queue
+            for data_id, data_line in enumerate(list_csv_prod_num):
                 if data_line is None or data_line == '':
                     continue
-                data_line_list_of_dicts = []
+                obj_with_dicts = {}
                 data_list.append(data_line.split(','))
-                data_line_list_of_dicts = [{col_name: col_val} for col_name, col_val in zip(columns_names, data_line.split(','))]
-                data_line_list_of_dicts.append({'prod_num': prod_num})
+                [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, data_line.split(','))]
+                obj_with_dicts.update({'prod num': prod_num})
+                obj_with_dicts.update({'time interval': data_id})
         
                 self.__channel.basic_publish(exchange=self.__exchange,
                                             routing_key=self.__r_key_request,
-                                            body=json.dumps(data_line_list_of_dicts))
-
-                full_data_list.append(data_line_list_of_dicts)
+                                            body=json.dumps(obj_with_dicts))
 
             pde_logs = self.__connection.process_data_events(time_limit=None)
             print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
             logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
-            return full_data_list
+            return obj_with_dicts
         except Exception as e:
             print(f"[Producer] data_publish: {traceback.format_exc()}")
             logging.error(f"[Producer] data_publish: {traceback.format_exc()}")

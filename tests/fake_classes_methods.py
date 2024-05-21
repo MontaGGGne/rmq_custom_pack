@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from rmq_custom_pack import rpc_producer
 from rmq_custom_pack import rpc_consumer
-from rmq_custom_pack import connection as conn
+from rmq_custom_pack import connections as conn
 
 
 #################################################### Fake External Methods ####################################################
