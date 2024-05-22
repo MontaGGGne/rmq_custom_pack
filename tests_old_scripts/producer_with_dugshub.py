@@ -47,7 +47,7 @@ class Producer():
         self.__channel = self.__connection.channel()
 
 
-    def producer_handler(self, prod_num: int, csv_files_dir: str, filename: str):
+    def producer_handler(self, prod_num: int, repo_url: str, token: str, url_path_storage: str, csv_files_dir: str, filename: str):
         self.__channel.exchange_declare(exchange=self.__exchange,
                                         exchange_type=self.__exchange_type,
                                         durable=True)
@@ -69,10 +69,12 @@ class Producer():
 
         try:
             basic_consume_res = self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=_callback)
-            list_csv = self._get_csv_from_dir(csv_files_dir, filename)
-            data_publish_res = self._data_publish(prod_num, list_csv)
+            # file_system = self._dugshub_conn(repo_url=repo_url, token=token)
+            # csv_file_str = self._get_files_from_dugshub(os.path.join(url_path_storage, filename), file_system)
+            data_publish_res = self._data_publish(prod_num, csv_file_str)
             return {'basic_consume_res': basic_consume_res,
-                    'list_csv': list_csv,
+                    'file_system': file_system,
+                    'csv_file_str': csv_file_str,
                     'data_publish_res': data_publish_res}
     
         except KeyboardInterrupt:
@@ -91,26 +93,36 @@ class Producer():
                 os._exit(0)
 
 
-    def _get_csv_from_dir(self, csv_files_dir: str, filename: str):
-        try:
-            csv_var: str = ""
-            list_csv: list = []
-            with open(os.path.join(csv_files_dir, filename), 'r') as csv_f:
-                csv_var = csv_f.read()
-                for i in csv_var.split('\n'):
-                    list_csv.append(i.split(','))
-            return list_csv
-        except Exception as e:
-            print(f"[Producer] get_csv_from_dir: {traceback.format_exc()}")
-            logging.error(f"[Producer] get_csv_from_dir: {traceback.format_exc()}")
-            logging.exception(e)
-            try:
-                sys.exit(0)
-            except SystemExit:
-                os._exit(0)
+    # def _dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
+    #     try:
+    #         stream = streaming.DagsHubFilesystem(".", repo_url=repo_url, token=token)
+    #         print(f"[Producer] dugshub_conn: (DagsHubFilesystem) {stream}")
+    #         logging.info(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
+    #         return stream
+    #     except Exception as e:
+    #         print(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
+    #         logging.error(f"[Producer] dugshub_conn: (DagsHubFilesystem) {traceback.format_exc()}")
+    #         logging.exception(e)
+    #         try:
+    #             sys.exit(0)
+    #         except SystemExit:
+    #             os._exit(0)
 
 
-    def _data_publish(self, prod_num, list_csv):
+    # def _get_files_from_dugshub(self, url: str, fs: streaming.DagsHubFilesystem):
+    #     try:
+    #         return fs.http_get(url)
+    #     except Exception as e:
+    #         print(f"[Producer] get_files_from_dugshub: (http_get) {traceback.format_exc()}")
+    #         logging.error(f"[Producer] get_files_from_dugshub: (http_get) {traceback.format_exc()}")
+    #         logging.exception(e)
+    #         try:
+    #             sys.exit(0)
+    #         except SystemExit:
+    #             os._exit(0)
+
+
+    def _data_publish(self, prod_num, csv_file_str):
         try:
             prod_num = int(prod_num)
         except Exception as e:
@@ -122,7 +134,12 @@ class Producer():
             except SystemExit:
                 os._exit(0)
         try:
-            columns_names = list_csv[0]
+            try:
+                list_csv = csv_file_str.text.split('\n')
+            except:
+                list_csv = csv_file_str.split('\n')
+            columns_names = list_csv[0].split(',')
+            data_list = []
 
             # remove string with columns names
             list_csv.pop(0)
@@ -131,27 +148,22 @@ class Producer():
             for i in range(prod_num-1):
                 list_csv.pop(0)
 
-            # post strings in request queue
-            data_list = []
-            buffer_data_id: int = 0
-            for data_id, data_line in enumerate(list_csv):
+            # get strings for prod num
+            list_csv_prod_num = list_csv[::3]
 
+            # post strings in request queue
+            for data_id, data_line in enumerate(list_csv_prod_num):
                 if data_line is None or data_line == '':
                     continue
-                if buffer_data_id+3 != data_id:
-                    continue
-                buffer_data_id = data_id
-
                 obj_with_dicts = {}
-                [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, data_line)]
+                data_list.append(data_line.split(','))
+                [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, data_line.split(','))]
                 obj_with_dicts.update({'prod num': prod_num})
                 obj_with_dicts.update({'time interval': data_id})
-
-                print(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
-                logging.info(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
+        
                 self.__channel.basic_publish(exchange=self.__exchange,
-                                             routing_key=self.__r_key_request,
-                                             body=json.dumps(obj_with_dicts))
+                                            routing_key=self.__r_key_request,
+                                            body=json.dumps(obj_with_dicts))
 
             pde_logs = self.__connection.process_data_events(time_limit=None)
             print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
