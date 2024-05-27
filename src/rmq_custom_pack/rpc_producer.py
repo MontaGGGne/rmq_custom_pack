@@ -70,7 +70,7 @@ class Producer():
         try:
             basic_consume_res = self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=_callback)
             list_csv = self._get_csv_from_dir(csv_files_dir, filename)
-            data_publish_res = self._data_publish(prod_num, list_csv)
+            data_publish_res = self._data_publish(prod_num, list_csv, filename)
             return {'basic_consume_res': basic_consume_res,
                     'list_csv': list_csv,
                     'data_publish_res': data_publish_res}
@@ -110,7 +110,7 @@ class Producer():
                 os._exit(0)
 
 
-    def _data_publish(self, prod_num, list_csv):
+    def _data_publish(self, prod_num, list_csv, filename: str):
         try:
             prod_num = int(prod_num)
         except Exception as e:
@@ -146,17 +146,22 @@ class Producer():
                 [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, data_line)]
                 obj_with_dicts.update({'prod num': prod_num})
                 obj_with_dicts.update({'time interval': data_id})
+                train_type = filename.rstrip('.csv').split('_')[-1]
+                obj_with_dicts.update({'train type': train_type})
 
                 print(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
                 logging.info(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
+                data_list.append(obj_with_dicts)
                 self.__channel.basic_publish(exchange=self.__exchange,
                                              routing_key=self.__r_key_request,
                                              body=json.dumps(obj_with_dicts))
 
-            pde_logs = self.__connection.process_data_events(time_limit=None)
-            print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
-            logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
-            return obj_with_dicts
+            # pde_logs = self.__connection.process_data_events(time_limit=None)
+            # print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
+            # logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
+            print(f"[Producer] data_publish: data_list (successful publish) - {data_list}")
+            logging.info(f"[Producer] data_publish: data_list (successful publish) - {data_list}")
+            return json.dumps(obj_with_dicts)
         except Exception as e:
             print(f"[Producer] data_publish: {traceback.format_exc()}")
             logging.error(f"[Producer] data_publish: {traceback.format_exc()}")
