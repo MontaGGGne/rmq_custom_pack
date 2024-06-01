@@ -62,9 +62,9 @@ class Consumer():
         self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
 
 
-    def consumer_handler(self, bucket, time_interval):
+    def consumer_handler(self, bucket, time_interval, begin_datetime):
         begin_datetime = time.time()
-        s3_begin_datetime_folder_str = '2024-06-01 00:00:00'
+        s3_begin_datetime_folder_str = begin_datetime
         s3_begin_datetime_folder_time = datetime.strptime(s3_begin_datetime_folder_str, '%Y-%m-%d %H:%M:%S').timestamp()
         s3_time_interval = timedelta(days=1).total_seconds()
         # time_interval = timeout_sec
