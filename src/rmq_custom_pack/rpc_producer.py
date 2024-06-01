@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import traceback
+import time
 from . import connections as conn
 from dagshub import streaming
 
@@ -155,6 +156,7 @@ class Producer():
                 self.__channel.basic_publish(exchange=self.__exchange,
                                              routing_key=self.__r_key_request,
                                              body=json.dumps(obj_with_dicts))
+                time.sleep(1)
 
             # pde_logs = self.__connection.process_data_events(time_limit=None)
             # print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
