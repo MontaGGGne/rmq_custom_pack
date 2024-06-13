@@ -4,6 +4,7 @@ import json
 import logging
 import traceback
 import time
+import random
 from . import connections as conn
 from dagshub import streaming
 
@@ -48,7 +49,7 @@ class Producer():
         self.__channel = self.__connection.channel()
 
 
-    def producer_handler(self, prod_num: int, csv_files_dir: str, filename: str):
+    def producer_handler(self, prod_num: int, csv_files_dir: str, filename: str, time_sleep: float):
         self.__channel.exchange_declare(exchange=self.__exchange,
                                         exchange_type=self.__exchange_type,
                                         durable=True)
@@ -70,10 +71,15 @@ class Producer():
 
         try:
             basic_consume_res = self.__channel.basic_consume(queue=self.__queue_response, on_message_callback=_callback)
-            list_csv = self._get_csv_from_dir(csv_files_dir, filename)
-            data_publish_res = self._data_publish(prod_num, list_csv, filename)
+            csv_info = self._get_csv_info_from_dir(csv_files_dir, filename)
+            data_publish_res = self._data_publish(prod_num,
+                                                  csv_info['dict_csv'],
+                                                  csv_info['units_list'],
+                                                  csv_info['columns_names'],
+                                                  time_sleep,
+                                                  filename)
             return {'basic_consume_res': basic_consume_res,
-                    'list_csv': list_csv,
+                    'list_csv': csv_info,
                     'data_publish_res': data_publish_res}
     
         except KeyboardInterrupt:
@@ -92,15 +98,35 @@ class Producer():
                 os._exit(0)
 
 
-    def _get_csv_from_dir(self, csv_files_dir: str, filename: str):
+    def _get_csv_info_from_dir(self, csv_files_dir: str, filename: str):
         try:
             csv_var: str = ""
-            list_csv: list = []
-            with open(os.path.join(csv_files_dir, filename), 'r') as csv_f:
+            dict_csv: dict = {}
+            units_list: list = []
+            columns_names = []
+            with open(os.path.join(csv_files_dir, filename), "r") as csv_f:
                 csv_var = csv_f.read()
-                for i in csv_var.split('\n'):
-                    list_csv.append(i.split(','))
-            return list_csv
+                for index, i in enumerate(csv_var.split('\n')):
+                    list_params = i.split(',')
+
+                    if index == 0:
+                        columns_names = list_params
+                        continue
+
+                    unit_number = list_params[0]
+                    
+                    try:
+                        unit_number_int = int(unit_number)
+                        units_list.append(unit_number_int)
+                    except:
+                        unit_number_int = unit_number
+                        units_list.append(unit_number_int)
+
+                    dict_csv[unit_number_int] = dict_csv.get(unit_number_int, []) + [list_params]
+
+            return {"dict_csv": dict_csv,
+                    "units_list": units_list,
+                    "columns_names": columns_names}
         except Exception as e:
             print(f"[Producer] get_csv_from_dir: {traceback.format_exc()}")
             logging.error(f"[Producer] get_csv_from_dir: {traceback.format_exc()}")
@@ -111,7 +137,7 @@ class Producer():
                 os._exit(0)
 
 
-    def _data_publish(self, prod_num, list_csv, filename: str):
+    def _data_publish(self, prod_num, dict_csv, units_list, columns_names, time_sleep: float, filename: str):
         try:
             prod_num = int(prod_num)
         except Exception as e:
@@ -122,45 +148,35 @@ class Producer():
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
+
+        uniq_unit_list = sorted(set(units_list))
+
+        for i in range(prod_num-1):
+            uniq_unit_list.pop(0)
+
+        prod_list = uniq_unit_list[::3]
+        random.shuffle(prod_list)
+
         try:
-            columns_names = list_csv[0]
-
-            # remove string with columns names
-            list_csv.pop(0)
-
-            # remove strings for prod num
-            for i in range(prod_num-1):
-                list_csv.pop(0)
-
-            # post strings in request queue
             data_list = []
-            buffer_data_id: int = 0
-            for data_id, data_line in enumerate(list_csv):
+            for unit_number in prod_list:
+                list_cycles_of_unit: list = dict_csv[unit_number]
+                for cycle in list_cycles_of_unit:
+                    obj_with_dicts = {}
+                    [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, cycle)]
+                    obj_with_dicts.update({'prod num': prod_num})
+                    obj_with_dicts.update({'measurement time': time.time()})
+                    train_type = filename.rstrip('.csv').split('_')[-1]
+                    obj_with_dicts.update({'train type': train_type})
 
-                if data_line is None or data_line == '':
-                    continue
-                if buffer_data_id+3 != data_id:
-                    continue
-                buffer_data_id = data_id
+                    print(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
+                    logging.info(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
+                    data_list.append(obj_with_dicts)
+                    self.__channel.basic_publish(exchange=self.__exchange,
+                                                routing_key=self.__r_key_request,
+                                                body=json.dumps(obj_with_dicts))
+                    time.sleep(time_sleep)
 
-                obj_with_dicts = {}
-                [obj_with_dicts.update({col_name: col_val}) for col_name, col_val in zip(columns_names, data_line)]
-                obj_with_dicts.update({'prod num': prod_num})
-                obj_with_dicts.update({'time interval': data_id})
-                train_type = filename.rstrip('.csv').split('_')[-1]
-                obj_with_dicts.update({'train type': train_type})
-
-                print(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
-                logging.info(f"[Producer] data_publish: obj_with_dicts - {obj_with_dicts}")
-                data_list.append(obj_with_dicts)
-                self.__channel.basic_publish(exchange=self.__exchange,
-                                             routing_key=self.__r_key_request,
-                                             body=json.dumps(obj_with_dicts))
-                time.sleep(1)
-
-            # pde_logs = self.__connection.process_data_events(time_limit=None)
-            # print(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
-            # logging.info(f"[Producer] data_publish: process_data_events (successful publish) - {pde_logs}")
             print(f"[Producer] data_publish: data_list (successful publish) - {data_list}")
             logging.info(f"[Producer] data_publish: data_list (successful publish) - {data_list}")
             return json.dumps(obj_with_dicts)
