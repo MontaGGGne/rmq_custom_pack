@@ -3,30 +3,22 @@ import setuptools
 import os
 
 
-# Открытие README.md и присвоение его long_description.
+print(os.listdir(os.path.join(os.path.dirname(__file__))))
+
+# Открытие README.md и присвоение его LONG_DESCRIPTION.
 with open("README.md", "r") as fh:
-	long_description = fh.read()
+	LONG_DESCRIPTION = fh.read()
 
-REQUIREMENTS = [
-    'pika==1.3.2',
-    'dagshub==0.3.19',
-    'setuptools==57.5.0',
-    'wheel==0.42.0'
-]
+# Отркытие requirements-dev.txt и присвоение его REQUIREMENTS.
+with open('requirements-dev.txt', "r") as req_file:
+    REQUIREMENTS = req_file.read().split('\n')
 
-PACKAGE_DATA = {"": ["LICENSE"]}
-# Поиск пакетов
-PACKAGES = setuptools.find_packages('src', include=['rmq*'])
 # Дериктория с пакетами
 PACKAGE_DIR = {"": "src"}
 
-# requirements = []
-# with open(os.path.join(os.path.dirname(__file__), 'requirements.txt'), "r") as fh:
-#     for line in fh:
-#         requirements.append(line)
-
-# Определение requests как requirements для того, чтобы этот пакет работал. Зависимости проекта.
-# requirements = ["requests<=2.21.0"]
+PACKAGE_DATA = {"src": ["LICENSE"]}
+# Поиск пакетов
+PACKAGES = setuptools.find_packages('src', include=['rmq*'])
 
 # Функция, которая принимает несколько аргументов. Она присваивает эти значения пакету.
 setuptools.setup(
@@ -41,7 +33,7 @@ setuptools.setup(
 	# Краткое описание, которое будет показано на странице PyPi.
 	description="Custom package for more convenient use of RabbitMQ functions (producer and consumer).",
 	# Длинное описание, которое будет отображаться на странице PyPi. Использует README.md репозитория для заполнения.
-	long_description=long_description,
+	long_description=LONG_DESCRIPTION,
 	# Определяет тип контента, используемый в long_description.
 	long_description_content_type="text/markdown",
 	# URL-адрес, представляющий домашнюю страницу проекта. Большинство проектов ссылаются на репозиторий.
