@@ -6,7 +6,6 @@ import time
 import math
 from datetime import datetime
 from datetime import timedelta
-from pathlib import Path
 from . import connections as conn
 
 

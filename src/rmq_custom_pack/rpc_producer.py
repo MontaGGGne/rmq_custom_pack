@@ -6,7 +6,6 @@ import traceback
 import time
 import random
 from . import connections as conn
-from dagshub import streaming
 
 
 logging.basicConfig(level=logging.INFO, filename="py_log_producer.log",filemode="w",
