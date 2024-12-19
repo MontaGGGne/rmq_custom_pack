@@ -47,8 +47,6 @@ class Producer():
 
         self.__channel = self.__connection.channel()
 
-
-    def producer_handler(self, prod_num: int, csv_files_dir: str, filename: str, time_sleep: float):
         self.__channel.exchange_declare(exchange=self.__exchange,
                                         exchange_type=self.__exchange_type,
                                         durable=True)
@@ -64,6 +62,9 @@ class Producer():
                                   queue=self.__queue_response,
                                   routing_key=self.__r_key_response)
 
+
+    def producer_handler(self, prod_num: int, csv_files_dir: str, filename: str, time_sleep: float):
+   
         def _callback(ch, method, properties, body):
             print(body)
             logging.debug(f"[Producer] callback: body - {body}")
@@ -107,22 +108,23 @@ class Producer():
                 csv_var = csv_f.read()
                 for index, i in enumerate(csv_var.split('\n')):
                     list_params = i.split(',')
-
+                    # Запись названия колонок в отдельную переменную
                     if index == 0:
                         columns_names = list_params
                         continue
-
+                    # Получение списка с названиями датчиков оборудования
                     unit_number = list_params[0]
-                    
                     try:
+                        # Составление списка оборудования
                         unit_number_int = int(unit_number)
                         units_list.append(unit_number_int)
                     except:
                         unit_number_int = unit_number
                         units_list.append(unit_number_int)
-
+                    # Запись данных в словарь:
+                    # ключ - название оборудования
+                    # значение - список циклов работы оборудования
                     dict_csv[unit_number_int] = dict_csv.get(unit_number_int, []) + [list_params]
-
             return {"dict_csv": dict_csv,
                     "units_list": units_list,
                     "columns_names": columns_names}
@@ -149,10 +151,8 @@ class Producer():
                 os._exit(0)
 
         uniq_unit_list = sorted(set(units_list))
-
         for i in range(prod_num-1):
             uniq_unit_list.pop(0)
-
         prod_list = uniq_unit_list[::3]
         random.shuffle(prod_list)
 

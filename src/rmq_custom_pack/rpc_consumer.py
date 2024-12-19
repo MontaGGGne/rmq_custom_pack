@@ -46,25 +46,35 @@ class Consumer():
 
         # print(f"[Consumer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
         logging.info(f"[Consumer] Before pika connection - host: {host}, port: {port}, user: {user}, password: {password}")
-        self.__picka_connection = conn._pika_connection(self.__host, self.__port, self.__user, self.__password)
+        self.__picka_connection = conn._pika_connection(self.__host,
+                                                        self.__port,
+                                                        self.__user,
+                                                        self.__password)
         # print("[Consumer] After connection")
         logging.info("[Consumer] After picka connection")
 
         self.__channel = self.__picka_connection.channel()  
 
-        self.__channel.exchange_declare(exchange=self.__exchange, exchange_type=self.__exchange_type, durable=True)
-
-        self.__channel.queue_declare(queue=self.__queue_request, durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_request, routing_key=self.__r_key_request)
-
-        self.__channel.queue_declare(queue=self.__queue_response, durable=True)
-        self.__channel.queue_bind(exchange=self.__exchange, queue=self.__queue_response, routing_key=self.__r_key_response)
+        self.__channel.exchange_declare(exchange=self.__exchange,
+                                        exchange_type=self.__exchange_type,
+                                        durable=True)
+        self.__channel.queue_declare(queue=self.__queue_request,
+                                     durable=True)
+        self.__channel.queue_bind(exchange=self.__exchange,
+                                  queue=self.__queue_request,
+                                  routing_key=self.__r_key_request)
+        self.__channel.queue_declare(queue=self.__queue_response,
+                                     durable=True)
+        self.__channel.queue_bind(exchange=self.__exchange,
+                                  queue=self.__queue_response,
+                                  routing_key=self.__r_key_response)
 
 
     def consumer_handler(self, bucket: str, time_interval: float, str_datetime_for_use: str):
         begin_datetime = time.time()
         s3_begin_datetime_folder_str = str_datetime_for_use
-        s3_begin_datetime_folder_time = datetime.strptime(s3_begin_datetime_folder_str, '%Y-%m-%d %H:%M:%S').timestamp()
+        s3_begin_datetime_folder_time = datetime.strptime(s3_begin_datetime_folder_str,
+                                                          '%Y-%m-%d %H:%M:%S').timestamp()
         s3_time_interval = timedelta(days=1).total_seconds()
         # time_interval = timeout_sec
 
@@ -80,6 +90,7 @@ class Consumer():
             time_in_cycles = body_dict["time in cycles"]
 
             current_datetime = time.time()
+
             base_dir = "units"
             current_unit = f"unit_number_{unit_number}"
             current_filename = f"time_in_cycles_{time_in_cycles}.json"
@@ -88,8 +99,14 @@ class Consumer():
             s3_datetime_folder_time = s3_begin_datetime_folder_time + s3_time_interval * num_interval
             s3_datetime_folder_loc = time.localtime(s3_datetime_folder_time)
             s3_datetime_folder_str = time.strftime('%Y-%m-%d %H:%M:%S', s3_datetime_folder_loc)
-            full_path = os.path.join(base_dir, s3_datetime_folder_str, current_unit, current_filename)
-            self.__s3_connection.put_object(Bucket=bucket, Key=full_path, Body=json.dumps(body_dict))
+
+            full_path = os.path.join(base_dir,
+                                     s3_datetime_folder_str,
+                                     current_unit,
+                                     current_filename)
+            self.__s3_connection.put_object(Bucket=bucket,
+                                            Key=full_path,
+                                            Body=json.dumps(body_dict))
 
             ch.basic_publish(exchange=self.__exchange,
                              routing_key=self.__r_key_response,
@@ -97,7 +114,8 @@ class Consumer():
 
         try:
             self.__channel.basic_qos(prefetch_count=1)
-            basic_consume_res = self.__channel.basic_consume(queue=self.__queue_request, on_message_callback=__callback)
+            basic_consume_res = self.__channel.basic_consume(queue=self.__queue_request,
+                                                             on_message_callback=__callback)
             try:
                 # print('[Consumer] Waiting for messages...')
                 logging.info('[Consumer] Waiting for messages...')

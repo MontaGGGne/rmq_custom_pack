@@ -38,7 +38,9 @@ def _boto3_connection(key_id: str, secret_key: str):
         session = boto3.session.Session()
         s3 = session.client(
             service_name='s3',
-            endpoint_url='https://storage.yandexcloud.net')
+            endpoint_url='https://storage.yandexcloud.net',
+            aws_access_key_id = key_id,
+            aws_secret_access_key = secret_key)
         logging.info("[Connection] After boto3 connection")
     except Exception as e:
         # print("[Connection] Boto3 connection failed")

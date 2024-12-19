@@ -1,27 +1,33 @@
+import json
 from pika import adapters
 from pika import connection
 from pika import credentials
-from dagshub import streaming
 from typing import Any, Dict
 
-from rmq_custom_pack import rpc_producer
-from rmq_custom_pack import rpc_consumer
-from rmq_custom_pack import connections as conn
+from .. import rpc_producer
+from .. import rpc_consumer
+from .. import connections as conn
 
 
 #################################################### Fake External Methods ####################################################
+#-------------------------------------------------------- For Boto3 --------------------------------------------------------
 
-#-------------------------------------------------------- For DagsHub --------------------------------------------------------
-class FakeDagsHubFilesystem():
-    def __init__(self, project_root: str, repo_url: str, token: str):
-        self.project_root = project_root
-        self.repo_url = repo_url
-        self.token = token
+def boto3_connection_test(key_id: str, secret_key: str) -> Any:
+    return {'key_id': key_id, 'secret_key': secret_key}
 
-    def fake_http_get(self, url: str):
-        return url
-#-------------------------------------------------------- For DagsHub --------------------------------------------------------
+#-------------------------------------------------------- For Producer --------------------------------------------------------
 
+def get_csv_info_from_dir_test(self, csv_files_dir: str, filename: str):
+    return {"dict_csv": {'csv_files_dir': csv_files_dir,
+                         'filename': filename},
+            "units_list": ['test_unit'],
+            "columns_names": ['test_col']}
+    
+def data_publish_test(self, prod_num, dict_csv, units_list, columns_names, time_sleep: float, filename: str):
+    res_dict = {'prod_num': prod_num,
+                'time_sleep': time_sleep,
+                'filename': filename}
+    return json.dumps(res_dict)
 
 #-------------------------------------------------------- For Picka --------------------------------------------------------
 
@@ -146,7 +152,6 @@ class FakeBlockingConnection():
 
 ######## Functions ########
 # Monkey patch
-streaming.DagsHubFilesystem = FakeDagsHubFilesystem
 adapters.BlockingConnection = FakeBlockingConnection
 
 def fake_pika_connection(host: str, port: int, user: str, password: str) -> adapters.BlockingConnection:
@@ -162,20 +167,3 @@ def fake_pika_connection(host: str, port: int, user: str, password: str) -> adap
 # Monkey patch
 conn._pika_connection = fake_pika_connection
 #-------------------------------------------------------- For Picka --------------------------------------------------------
-
-
-#################################################### Fake Producer Methods ####################################################
-
-def fake_dugshub_conn(self, repo_url: str, token: str) -> streaming.DagsHubFilesystem:
-    return streaming.DagsHubFilesystem(project_root='.',
-                                       repo_url=repo_url,
-                                       token=token)
-
-
-def fake_get_files_from_dugshub(self, url: str, fs: streaming.DagsHubFilesystem):
-    return fs.fake_http_get(url)
-
-
-# Monkey patch
-rpc_producer.Producer._dugshub_conn = fake_dugshub_conn
-rpc_producer.Producer._get_files_from_dugshub = fake_get_files_from_dugshub
